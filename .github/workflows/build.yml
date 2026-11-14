@@ -33,10 +33,21 @@ jobs:
         working-directory: ${{ env.APP_DIR }}
         run: npx cap add android
 
-      - name: Make icons (optional)
-        continue-on-error: true
+      - name: Set app icon and splash
         working-directory: ${{ env.APP_DIR }}
-        run: npx capacitor-assets generate --android --iconBackgroundColor '#0e1b2a' --splashBackgroundColor '#0e1b2a'
+        run: |
+          sudo apt-get update -y && sudo apt-get install -y imagemagick
+          SRC=assets/icon-only.png
+          RES=android/app/src/main/res
+          rm -rf $RES/mipmap-anydpi-v26
+          for pair in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+            d=${pair%%:*}; s=${pair##*:}
+            for n in ic_launcher ic_launcher_round ic_launcher_foreground; do
+              convert $SRC -resize ${s}x${s} $RES/mipmap-$d/$n.png
+            done
+          done
+          convert -size 2732x2732 xc:'#0e1b2a' \( $SRC -resize 700x700 \) -gravity center -composite /tmp/splash.png
+          for f in $(find $RES -name 'splash.png'); do cp /tmp/splash.png "$f"; done
 
       - name: Sync
         working-directory: ${{ env.APP_DIR }}
